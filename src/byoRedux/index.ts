@@ -30,3 +30,33 @@ export const combineReducers= (...reducers) =>{
         return nextState;
     }
 }
+
+export const applyMiddleware = middleware =>{
+    return createStore => reducer => {
+        const store = createStore(reducer)
+        return {
+            ...store,
+            dispatch: function (action) {
+                return middleware(store)(store.dispatch)(action);
+            }
+        }
+    }
+}
+
+/**
+ * Wraps Action Creators in `dispatch` calls for the consumer so
+ * that they don't have to call `store.dispatch(ActionCreator.something())`
+ * each time.
+ */
+ export const bindActionCreators = (actionCreators, dispatch) => {
+    const boundedActionCreators = {}
+    const actionKeys = Object.keys(actionCreators)
+    actionKeys.forEach(key => {
+      const actionCreator = actionCreators[key]
+      boundedActionCreators[key] = function boundedActionCreator() {
+        return dispatch(actionCreator.apply(this, arguments))
+      }
+    })
+
+    return boundedActionCreators
+  }

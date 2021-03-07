@@ -1,3 +1,4 @@
+import { applyMiddleware, bindActionCreators } from './index';
 import { combineReducers, createStore } from ".";
 
 type Reducer = (state: any, action: any) => void;
@@ -6,8 +7,19 @@ type Action = any;
 type Store = {
     getState: () => { value: number, word: string };
     dispatch: (action: Action) => void;
-    subscribe: (listener: Listener) =>;
+    subscribe: any;
 };
+
+const TestActions: = {
+    "ADD_NUM": (num:number) => {
+        return { type: "ADD", num: num }
+    },
+    "ADD_SUFFIX": (end:string) => {
+        return { type: "SUFFIX", suffix: end }
+    }
+}
+
+
 
 describe("Create Store ", () => {
 
@@ -51,10 +63,6 @@ describe("Create Store ", () => {
     describe('Reducer', () => {
         let numberReducer: Reducer;
         let textReducer: Reducer;
-
-        const addAction:Action = { type: "ADD", num: 1 }
-        const suffixAction:Action = { type: "SUFFIX", suffix: 'ing' }
-
         beforeEach(() => {
             numberReducer = (state = { value: 0 }, action) => {
                 switch (action.type) {
@@ -94,7 +102,7 @@ describe("Create Store ", () => {
                 return { value: 5 };
             }
             const store = createStore(reducer);
-            store.dispatch(addAction);
+            store.dispatch({});
             const state = store.getState()
             expect(state).toEqual({ value: 5 });
 
@@ -102,19 +110,35 @@ describe("Create Store ", () => {
         test('should create new state', () => {
             const store = createStore(numberReducer
             );
-            store.dispatch(addAction);
-            store.dispatch(addAction);
+            store.dispatch(TestActions.ADD_NUM(1));
+            store.dispatch(TestActions.ADD_NUM(1));
             const state = store.getState()
             expect(state).toEqual({ value: 2 });
 
         });
-        test('should be able to combine reducers', () => {
+        test('should be able to combine reducers and use bind actions', () => {
             const combinedReducers: Reducer = combineReducers(numberReducer, textReducer);
             const store = createStore(combinedReducers);
-            store.dispatch(addAction);
+            const bindActions = bindActionCreators(TestActions, store.dispatch);
+            bindActions.ADD_NUM(1);
             expect(store.getState()).toEqual({ "0": { "value": 1 }, "1": { "word": "test" } });
-            store.dispatch(suffixAction);
+            bindActions.ADD_SUFFIX('ing');
             expect(store.getState()).toEqual({ "0": { "value": 1 }, "1": { "word": "testing" } });
+            bindActions.ADD_NUM(3);
+            expect(store.getState()).toEqual({ "0": { "value": 4 }, "1": { "word": "testing" } });
         });
+
+        test('should call middleware', () => {
+            const mockMiddleware = jest.fn(store => next => action => {
+                return next(action)
+            });
+            const enhancedStore = applyMiddleware(mockMiddleware)(createStore)(numberReducer)
+            enhancedStore.dispatch(TestActions.ADD_NUM(1));
+            expect(mockMiddleware).toHaveBeenCalled();
+            expect(enhancedStore.getState()).toEqual({ value: 1 });
+
+
+        });
+
     });
 });
